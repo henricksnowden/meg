@@ -1,5 +1,5 @@
 /*
-*Copyright (C) 2018 Trasicio Maina <cisiomaina@gmail.com>
+*Copyright (C) 2024 Trasicio Maina <cisiomaina@gmail.com>
 
 *This program is free software; you can redistribute it and/or modify it under the terms of the GNU
 *General Public License version 3 as published by the Free Software Foundation.
@@ -14,6 +14,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 // Function to read and display the content of a file
 void readFile(const char *filename)
@@ -38,13 +39,13 @@ void readFile(const char *filename)
 // Function to display version information
 void displayVersion()
 {
-    printf("The Meg version 0.01\n");
-    printf("Written by Trasicio Maina.\n");
+    printf("The Meg version 0.01 (c)Trasicio Maina, 2024.\n");
 }
 
 // Function to display help information and usage examples
 void displayHelp()
 {
+    printf("\n");
     displayVersion();
     printf("\nUsage: text_editor <filename>\n");
     printf("Read and display the content of a file.\n");
@@ -52,21 +53,39 @@ void displayHelp()
     printf(" --help\tDisplay this help message and exit\n");
     printf(" --version\tDisplay version information and exit\n");
     printf("\nExamples:\n");
-    printf(" text_editor file.txt\tRead and display the content of file.txt\n");
-    printf(" text_editor --help\tDisplay this help message\n");
-    printf(" text_editor --version\tDisplay version information\n");
+    printf(" meg file.txt\tRead and display the content of file.txt\n");
+    printf(" meg --help\tDisplay this help message\n");
+    printf(" meg --version\tDisplay version information\n");
+    printf("\n");
 }
 
 int main(int argc, char *argv[])
 {
+
+    // Check if the --help or --version options are provided
+    if (argc == 2)
+    {
+        if (strcmp(argv[1], "--help") == 0)
+        {
+            displayHelp();      // Display the help information
+            exit(EXIT_SUCCESS); // Exit the program successfully
+        }
+        else if (strcmp(argv[1], "--version") == 0)
+        {
+            displayVersion();   // Display the version information
+            exit(EXIT_SUCCESS); // Exit the program successfully
+        }
+    }
+
     // Check if the filename is provided as a command-line argument
     if (argc < 2) // Point of note: the program name counts as one argument :)
     {
         fprintf(stderr, "Usage: %s <filename>\n", argv[0]); // Print the usage message
         exit(EXIT_FAILURE);                                 // Exit the program with an error status
     }
-
+    printf("\n");
     readFile(argv[1]); // Call the readFile function with the provided filename
+    printf("\n\n");
 
     return 0; // Exit the program successfully
 }
