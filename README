@@ -1,0 +1,4 @@
+A simple text editor in C that reads the content of a file and dumps it to stdout.
+I intend to build on this primitive text editor to add more features, such as editing capabilities, saving changes, handling different file formats, and more.
+
+May or may not have anything to do with Meg Griffin :)
