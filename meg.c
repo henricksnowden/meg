@@ -15,35 +15,66 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h> // Include errno.h for error handling.
+#include <errno.h>
+#include <ncurses.h> // Include ncurses for keyboard handling and screen display
 
-// Function to read and display the content of a file
+#define CTRL_KEY(k) ((k) & 0x1f)
+
+void readFile(const char *filename);
+void writeFile(const char *filename, const char *content);
+void displayVersion();
+void displayHelp();
+
+char *buffer = NULL;
+size_t bufferSize = 0;
+size_t bufferLength = 0;
+int modified = 0;
+
 void readFile(const char *filename)
 {
-    FILE *file = fopen(filename, "r"); // Open the file in read mode
+    FILE *file = fopen(filename, "r");
     if (file == NULL)
-    {                                 // Check if the file was opened successfully
-        perror("Error opening file"); // Print an error message if the file cannot be opened
-        return;                       // Exit the function
-    }
-
-    char ch;
-    // Read each character from the file until the end of the file is reached
-    while ((ch = fgetc(file)) != EOF)
     {
-        putchar(ch); // Print each character to the console
+        perror("Error opening file");
+        return;
     }
 
-    fclose(file); // Close the file after reading
+    fseek(file, 0, SEEK_END);
+    bufferSize = ftell(file);
+    rewind(file);
+
+    buffer = malloc(bufferSize + 1);
+    if (buffer == NULL)
+    {
+        perror("Error allocating memory");
+        fclose(file);
+        return;
+    }
+
+    bufferLength = fread(buffer, 1, bufferSize, file);
+    buffer[bufferLength] = '\0';
+
+    fclose(file);
 }
 
-// Function to display version information
+void writeFile(const char *filename, const char *content)
+{
+    FILE *file = fopen(filename, "w");
+    if (file == NULL)
+    {
+        perror("Error opening file for writing");
+        return;
+    }
+
+    fwrite(content, 1, strlen(content), file);
+    fclose(file);
+}
+
 void displayVersion()
 {
     printf("The Meg version 0.01 (c) Trasicio Maina, 2024.\n");
 }
 
-// Function to display help information and usage examples
 void displayHelp()
 {
     printf("\n");
@@ -60,32 +91,75 @@ void displayHelp()
     printf("\n");
 }
 
+void textEditor(const char *filename)
+{
+    initscr();
+    raw();
+    keypad(stdscr, TRUE);
+    noecho();
+
+    if (buffer != NULL)
+    {
+        printw("%s", buffer);
+    }
+
+    int ch;
+    while ((ch = getch()) != CTRL_KEY('q'))
+    {
+        switch (ch)
+        {
+        case CTRL_KEY('s'):
+            writeFile(filename, buffer);
+            modified = 0;
+            mvprintw(LINES - 1, 0, "File saved.");
+            break;
+        default:
+            buffer[bufferLength++] = ch;
+            buffer[bufferLength] = '\0';
+            modified = 1;
+            addch(ch);
+            break;
+        }
+    }
+
+    if (modified)
+    {
+        mvprintw(LINES - 1, 0, "You have unsaved changes. Save before quitting? (y/n)");
+        int saveCh = getch();
+        if (saveCh == 'y')
+        {
+            writeFile(filename, buffer);
+        }
+    }
+
+    endwin();
+}
+
 int main(int argc, char *argv[])
 {
-    // Check if the --help or --version options are provided
     if (argc == 2)
     {
         if (strcmp(argv[1], "--help") == 0)
         {
-            displayHelp();      // Display the help information
-            exit(EXIT_SUCCESS); // Exit the program successfully
+            displayHelp();
+            exit(EXIT_SUCCESS);
         }
         else if (strcmp(argv[1], "--version") == 0)
         {
-            displayVersion();   // Display the version information
-            exit(EXIT_SUCCESS); // Exit the program successfully
+            displayVersion();
+            exit(EXIT_SUCCESS);
         }
     }
 
-    // Check if the filename is provided as a command-line argument
-    if (argc < 2) // Point of note: the program name counts as one argument :)
+    if (argc < 2)
     {
-        fprintf(stderr, "Usage: %s <filename>\n", argv[0]); // Print the usage message
-        exit(EXIT_FAILURE);                                 // Exit the program with an error status
+        fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
+        exit(EXIT_FAILURE);
     }
-    printf("\n");
-    readFile(argv[1]); // Call the readFile function with the provided filename
-    printf("\n\n");
 
-    return 0; // Exit the program successfully
+    readFile(argv[1]);
+    textEditor(argv[1]);
+
+    free(buffer);
+    return 0;
 }
