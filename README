@@ -1,4 +1,12 @@
-A simple text editor in C that reads the content of a file and dumps it to stdout.
+May or may not have anything to do with Meg Griffin :)
+
+A simple text editor in C that reads the content of a file and dumps it to stdout. Added functionality now enables you to create and edit files.
 I intend to build on this primitive text editor to add more features, such as editing capabilities, saving changes, handling different file formats, and more.
 
-May or may not have anything to do with Meg Griffin :)
+This program is designed to work in linux systems as ncurses is not available on Windows.
+    Should you want to run on Windows:
+        1. ncurses is not natively available on Windows, so you might need to replace it with a pdcurses or remove its dependency if cross-compilation becomes complex.
+        2. Ensure that any required DLLs (like pdcurses.dll) are included with your exe file.
+    
+    I do not intend to make it cross-platform at present.
+
