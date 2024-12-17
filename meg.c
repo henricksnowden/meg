@@ -15,151 +15,170 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
-#include <ncurses.h> // Include ncurses for keyboard handling and screen display
+#include <errno.h>   // Include errno.h for error handling.
+#include <ncurses.h> // Include ncurses for keyboard handling and screen display.
 
-#define CTRL_KEY(k) ((k) & 0x1f)
+#define CTRL_KEY(k) ((k) & 0x1f) // Macro to define control key combinations.
 
+// Function prototypes.
 void readFile(const char *filename);
 void writeFile(const char *filename, const char *content);
 void displayVersion();
 void displayHelp();
+void textEditor(const char *filename);
 
+// Global variables to manage buffer content.
 char *buffer = NULL;
 size_t bufferSize = 0;
 size_t bufferLength = 0;
-int modified = 0;
+int modified = 0; // Flag to track if the buffer has been modified.
 
+// Function to read and display the content of a file.
 void readFile(const char *filename)
 {
-    FILE *file = fopen(filename, "r");
+    FILE *file = fopen(filename, "r"); // Open the file in read mode.
     if (file == NULL)
-    {
-        perror("Error opening file");
-        return;
+    {                                 // Check if the file was opened successfully.
+        perror("Error opening file"); // Print an error message if the file cannot be opened.
+        return;                       // Exit the function.
     }
 
+    // Move the file pointer to the end of the file and get the file size.
     fseek(file, 0, SEEK_END);
     bufferSize = ftell(file);
-    rewind(file);
+    rewind(file); // Rewind the file pointer to the beginning.
 
+    // Allocate memory for the buffer to store file content.
     buffer = malloc(bufferSize + 1);
     if (buffer == NULL)
-    {
-        perror("Error allocating memory");
-        fclose(file);
-        return;
+    {                                      // Check if memory allocation was successful.
+        perror("Error allocating memory"); // Print an error message if memory allocation fails.
+        fclose(file);                      // Close the file.
+        return;                            // Exit the function.
     }
 
+    // Read the file content into the buffer.
     bufferLength = fread(buffer, 1, bufferSize, file);
-    buffer[bufferLength] = '\0';
+    buffer[bufferLength] = '\0'; // Null-terminate the buffer.
 
-    fclose(file);
+    fclose(file); // Close the file.
 }
 
+// Function to write buffer content to a file.
 void writeFile(const char *filename, const char *content)
 {
-    FILE *file = fopen(filename, "w");
+    FILE *file = fopen(filename, "w"); // Open the file in write mode.
     if (file == NULL)
-    {
-        perror("Error opening file for writing");
-        return;
+    {                                             // Check if the file was opened successfully.
+        perror("Error opening file for writing"); // Print an error message if the file cannot be opened.
+        return;                                   // Exit the function.
     }
 
+    // Write the content to the file.
     fwrite(content, 1, strlen(content), file);
-    fclose(file);
+    fclose(file); // Close the file.
 }
 
+// Function to display version information.
 void displayVersion()
 {
     printf("The Meg version 0.01 (c) Trasicio Maina, 2024.\n");
 }
 
+// Function to display help information and usage examples.
 void displayHelp()
 {
     printf("\n");
-    displayVersion();
-    printf("\nUsage: text_editor <filename>\n");
+    displayVersion(); // Display version information.
+    printf("\nUsage: meg <filename>\n");
     printf("Read and display the content of a file.\n");
     printf("\nOptions:\n");
-    printf("  --help\tDisplay this help message and exit\n");
-    printf("  --version\tDisplay version information and exit\n");
-    printf("\nExamples:\n");
-    printf("  meg file.txt\tRead and display the content of file.txt\n");
-    printf("  meg --help\tDisplay this help message\n");
-    printf("  meg --version\tDisplay version information\n");
+    printf(" --help\tDisplay this help message and exit\n");
+    printf(" --version\tDisplay version information and exit\n");
+    printf(" meg newfile.txt\tStart a new file and edit its content\n");
+    printf(" Ctrl+S\tSave the file\n");
+    printf(" Ctrl+Q\tQuit the program\n");
     printf("\n");
 }
 
+// Function to handle text editing, including saving and quitting.
 void textEditor(const char *filename)
 {
-    initscr();
-    raw();
-    keypad(stdscr, TRUE);
-    noecho();
+    initscr();            // Initialize the ncurses screen.
+    raw();                // Enable raw mode for direct input.
+    keypad(stdscr, TRUE); // Enable keyboard mapping.
+    noecho();             // Disable echoing of typed characters.
 
+    // Display the existing buffer content if available.
     if (buffer != NULL)
     {
         printw("%s", buffer);
     }
 
     int ch;
+    // Main loop to process user input.
     while ((ch = getch()) != CTRL_KEY('q'))
-    {
+    { // Check for Ctrl+Q to quit.
         switch (ch)
         {
-        case CTRL_KEY('s'):
-            writeFile(filename, buffer);
-            modified = 0;
-            mvprintw(LINES - 1, 0, "File saved.");
+        case CTRL_KEY('s'):                        // Check for Ctrl+S to save.
+            writeFile(filename, buffer);           // Save the buffer content to the file.
+            modified = 0;                          // Reset the modified flag.
+            mvprintw(LINES - 1, 0, "File saved."); // Display a save confirmation message.
             break;
-        default:
-            buffer[bufferLength++] = ch;
-            buffer[bufferLength] = '\0';
-            modified = 1;
-            addch(ch);
+        default:                         // Handle other input characters.
+            buffer[bufferLength++] = ch; // Add character to the buffer.
+            buffer[bufferLength] = '\0'; // Null-terminate the buffer.
+            modified = 1;                // Set the modified flag.
+            addch(ch);                   // Add character to the screen.
             break;
         }
     }
 
+    // Prompt to save if there are unsaved changes.
     if (modified)
     {
         mvprintw(LINES - 1, 0, "You have unsaved changes. Save before quitting? (y/n)");
-        int saveCh = getch();
+        int saveCh = getch(); // Get user input for saving.
         if (saveCh == 'y')
-        {
-            writeFile(filename, buffer);
+        {                                // Check if user wants to save.
+            writeFile(filename, buffer); // Save the buffer content to the file.
         }
     }
 
-    endwin();
+    endwin(); // End ncurses mode.
 }
 
 int main(int argc, char *argv[])
 {
+    // Check if the --help or --version options are provided.
     if (argc == 2)
     {
         if (strcmp(argv[1], "--help") == 0)
         {
-            displayHelp();
-            exit(EXIT_SUCCESS);
+            displayHelp();      // Display the help information.
+            exit(EXIT_SUCCESS); // Exit the program successfully.
         }
         else if (strcmp(argv[1], "--version") == 0)
         {
-            displayVersion();
-            exit(EXIT_SUCCESS);
+            displayVersion();   // Display the version information.
+            exit(EXIT_SUCCESS); // Exit the program successfully.
         }
     }
 
+    // Check if the filename is provided as a command-line argument.
     if (argc < 2)
-    {
-        fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
-        exit(EXIT_FAILURE);
+    {                                                       // Point of note: the program name counts as one argument :)
+        fprintf(stderr, "Usage: %s <filename>\n", argv[0]); // Print the usage message.
+        exit(EXIT_FAILURE);                                 // Exit the program with an error status.
     }
 
+    // Read the file content into the buffer.
     readFile(argv[1]);
+    // Start the text editor.
     textEditor(argv[1]);
 
+    // Free the allocated buffer memory.
     free(buffer);
-    return 0;
+    return 0; // Exit the program successfully.
 }
