@@ -19,6 +19,7 @@
 #include <ncurses.h> // Include ncurses for keyboard handling and screen display.
 
 #define CTRL_KEY(k) ((k) & 0x1f) // Macro to define control key combinations.
+#define BACKSPACE 127            // Define the backspace key code.
 
 // Function prototypes.
 void readFile(const char *filename);
@@ -93,11 +94,12 @@ void displayHelp()
     printf("\nUsage: meg <filename>\n");
     printf("Read and display the content of a file.\n");
     printf("\nOptions:\n");
-    printf(" --help\tDisplay this help message and exit\n");
-    printf(" --version\tDisplay version information and exit\n");
-    printf(" meg newfile.txt\tStart a new file and edit its content\n");
-    printf(" Ctrl+S\tSave the file\n");
-    printf(" Ctrl+Q\tQuit the program\n");
+    printf("  --help\tDisplay this help message and exit\n");
+    printf("  --version\tDisplay version information and exit\n");
+    printf("\nWriting a New File:\n");
+    printf("  meg newfile.txt\tStart a new file and edit its content\n");
+    printf("  Ctrl+S\tSave the file\n");
+    printf("  Ctrl+Q\tQuit the program\n");
     printf("\n");
 }
 
@@ -109,10 +111,21 @@ void textEditor(const char *filename)
     keypad(stdscr, TRUE); // Enable keyboard mapping.
     noecho();             // Disable echoing of typed characters.
 
-    // Display the existing buffer content if available.
-    if (buffer != NULL)
+    // Allocate initial buffer memory if not reading from a file.
+    if (buffer == NULL)
     {
-        printw("%s", buffer);
+        bufferSize = 1024; // Initial buffer size.
+        buffer = malloc(bufferSize);
+        if (buffer == NULL)
+        {
+            perror("Error allocating initial buffer");
+            endwin();
+            exit(EXIT_FAILURE);
+        }
+    }
+    else
+    {
+        printw("%s", buffer); // Display the existing buffer content if available.
     }
 
     int ch;
@@ -125,12 +138,37 @@ void textEditor(const char *filename)
             writeFile(filename, buffer);           // Save the buffer content to the file.
             modified = 0;                          // Reset the modified flag.
             mvprintw(LINES - 1, 0, "File saved."); // Display a save confirmation message.
+            refresh();
             break;
-        default:                         // Handle other input characters.
+        case BACKSPACE: // Handle the backspace key.
+        case KEY_BACKSPACE:
+            if (bufferLength > 0)
+            {
+                buffer[--bufferLength] = '\0'; // Remove the last character from the buffer.
+                int y, x;
+                getyx(stdscr, y, x); // Get the current cursor position.
+                mvdelch(y, x - 1);   // Move the cursor back and delete the character.
+                modified = 1;        // Set the modified flag.
+                refresh();
+            }
+            break;
+        default: // Handle other input characters.
+            if (bufferLength + 1 >= bufferSize)
+            {
+                bufferSize *= 2; // Double the buffer size.
+                buffer = realloc(buffer, bufferSize);
+                if (buffer == NULL)
+                {
+                    perror("Error reallocating buffer");
+                    endwin();
+                    exit(EXIT_FAILURE);
+                }
+            }
             buffer[bufferLength++] = ch; // Add character to the buffer.
             buffer[bufferLength] = '\0'; // Null-terminate the buffer.
             modified = 1;                // Set the modified flag.
             addch(ch);                   // Add character to the screen.
+            refresh();
             break;
         }
     }
@@ -139,6 +177,7 @@ void textEditor(const char *filename)
     if (modified)
     {
         mvprintw(LINES - 1, 0, "You have unsaved changes. Save before quitting? (y/n)");
+        refresh();
         int saveCh = getch(); // Get user input for saving.
         if (saveCh == 'y')
         {                                // Check if user wants to save.
